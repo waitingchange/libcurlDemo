@@ -347,7 +347,7 @@ bool WriteFile( const std::string& fn, int rangeStart, std::string& packetString
 int main(int argc, const char * argv[])
 {
     std::string path = "/Users/change/Desktop/demo/测试/";
-    std::string resource = "https://game-oss.vipthink.cn/video/class/course_sdk_202103251553.zip";
+    std::string resource = "http://cdn.vipthink.cn/app/pc/teacher/vipthink-teacher_win_1.11.0.exe";
 //    download(2,resource,path,"course_sdk_202103251553.zip");
     libcurldownload(2,resource,path,"course_sdk_202103251553.zip");
 //    resumeDownload("http://cdn.vipthink.cn/app/pc/teacher/vipthink-teacher_win_1.11.0.exe");
