@@ -15,7 +15,6 @@
 		0C605FBE262744EF00CBB8EE /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C605FBA262744EF00CBB8EE /* libssl.a */; };
 		0C605FBF262744EF00CBB8EE /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C605FBB262744EF00CBB8EE /* libcrypto.a */; };
 		0C605FC0262744EF00CBB8EE /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C605FBC262744EF00CBB8EE /* libcurl.a */; };
-		0C713AB526259F78008D205C /* CurlDownloader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0C713AB426259F78008D205C /* CurlDownloader.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -208,7 +207,6 @@
 				0C1CAB1325BA7696003B1491 /* main.cpp in Sources */,
 				0C4A337B262D8D800014B93E /* ResumeDownload.cpp in Sources */,
 				0C243F97262EBD5900622712 /* LibcurlDownloader.cpp in Sources */,
-				0C713AB526259F78008D205C /* CurlDownloader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

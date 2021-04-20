@@ -18,6 +18,7 @@
 #include <fstream>
 #include "CurlDownloader.hpp"
 #include "ResumeDownload.hpp"
+#include "LibcurlDownloader.hpp"
 //#include "Pinger.hpp"
 
 using boost::asio::ip::tcp;
@@ -347,7 +348,8 @@ int main(int argc, const char * argv[])
 {
     std::string path = "/Users/change/Desktop/demo/测试/";
     std::string resource = "https://game-oss.vipthink.cn/video/class/course_sdk_202103251553.zip";
-    download(2,resource,path,"course_sdk_202103251553.zip");
+//    download(2,resource,path,"course_sdk_202103251553.zip");
+    libcurldownload(2,resource,path,"course_sdk_202103251553.zip");
 //    resumeDownload("http://cdn.vipthink.cn/app/pc/teacher/vipthink-teacher_win_1.11.0.exe");
 
     char c ;
