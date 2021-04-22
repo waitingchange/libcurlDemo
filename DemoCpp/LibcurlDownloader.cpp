@@ -42,6 +42,19 @@ struct downloadInfo
     uint32_t success;
 };
 
+// read 方式去查看本地文件是否存在
+bool checkLocalFileIsExist(std::string filePath)
+{
+    FILE *fh;
+    fh = fopen(filePath.c_str(), "r");
+    if(fh == nullptr)
+    {
+        return false;
+    }
+    fclose(fh);
+    return true;
+}
+
 void initTmpJson(int threadNum)
 {
     rapidjson::Document document;
@@ -206,58 +219,65 @@ bool libcurldownload(int threadNum, string url, string path, string fileName)
         return false;
     }
     totalDownloadSize = fileLength;
-    cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>totalDownloadsize: " << totalDownloadSize << endl;
+    
+    const string outFileName = path + fileName;
+    const string outTmpFile = outFileName + ".tmp";
     // 先清除掉本次下载信息
-    
-    
-    initTmpJson(threadNum);
     downloadMap.clear();
     errorFlag = false;
-    const string outFileName = path + fileName;
-    FILE *fp = fopen(outFileName.c_str(), "wb");
-    if (!fp)
-    {
-        return false;
-    }
     
-    //根据线程来进行分片
-    for (int i = 0; i < threadNum; i++)
+    bool hasTmpFile = checkLocalFileIsExist(outTmpFile);
+    if(hasTmpFile)
     {
-        downloadNode *pNode = new downloadNode();
-        pNode->startPos = fileLength * i / threadNum;
-        pNode->endPos = fileLength * (i + 1) / threadNum;
-        CURL *curl = curl_easy_init();
+        cout << "fuck neet resume download!" << endl;
+    }else{
+        cout << "first time to download file !" << endl;
+        
+        initTmpJson(threadNum);
+        FILE *fp = fopen(outFileName.c_str(), "wb");
+        if (!fp)
+        {
+            return false;
+        }
+        
+        //根据线程来进行分片
+        for (int i = 0; i < threadNum; i++)
+        {
+            downloadNode *pNode = new downloadNode();
+            pNode->startPos = fileLength * i / threadNum;
+            pNode->endPos = fileLength * (i + 1) / threadNum;
+            CURL *curl = curl_easy_init();
 
-        pNode->curl = curl;
-        pNode->fp = fp;
-        pNode->index = i + 1;
-        char range[64] = { 0 };
-        
-#ifdef _WIN32
-        _snprintf(range, sizeof (range), "%ld-%ld", pNode->startPos, pNode->endPos);
-#else
-        snprintf(range, sizeof (range), "%ld-%ld", pNode->startPos, pNode->endPos);
-#endif
-        cout << "fuck  range is : " << range << endl;
-        
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeFunc);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)pNode);
-        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressFunction);
-        curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void *)pNode);;
-        curl_easy_setopt(curl, CURLOPT_RANGE, range);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0L);
-        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
-//        // 设置重定位URL
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-//
-        pthread_mutex_lock (&g_mutex);
-        currThreadCnt++;
-        pthread_mutex_unlock (&g_mutex);
-        std::thread thread(workThread, pNode);
-        thread.detach();
+            pNode->curl = curl;
+            pNode->fp = fp;
+            pNode->index = i + 1;
+            char range[64] = { 0 };
+            
+    #ifdef _WIN32
+            _snprintf(range, sizeof (range), "%ld-%ld", pNode->startPos, pNode->endPos);
+    #else
+            snprintf(range, sizeof (range), "%ld-%ld", pNode->startPos, pNode->endPos);
+    #endif
+            cout << "fuck  range is : " << range << endl;
+            
+            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeFunc);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)pNode);
+            curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+            curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressFunction);
+            curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void *)pNode);;
+            curl_easy_setopt(curl, CURLOPT_RANGE, range);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0L);
+            curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
+    //        // 设置重定位URL
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    //
+            pthread_mutex_lock (&g_mutex);
+            currThreadCnt++;
+            pthread_mutex_unlock (&g_mutex);
+            std::thread thread(workThread, pNode);
+            thread.detach();
+        }
     }
-    
     return true;
 }
