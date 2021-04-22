@@ -7,6 +7,14 @@
 
 #include "LibcurlDownloader.hpp"
 
+#include "json/rapidjson.h"
+#include "json/document.h"
+#include "json/writer.h"
+#include "json/stringbuffer.h"
+
+using namespace rapidjson;
+
+
 int currThreadCnt;
 int totalThreadNum;
 long totalDownloadSize;
@@ -22,6 +30,48 @@ struct downloadNode
     CURL *curl;
     int index;
 };
+
+
+struct downloadInfo
+{
+    string fileName;
+    long totalFileLen;
+    long currentFileLen;
+    int threadNum;
+    string fileMd5;
+    uint32_t success;
+};
+
+void initTmpJson(int threadNum)
+{
+    rapidjson::Document document;
+    document.SetObject();
+    rapidjson::Document::AllocatorType &allocator = document.GetAllocator();
+//    object.AddMember("clientTime", UtilityTools::getCurrentMilliseconds(), allocator);
+    document.AddMember("fileName", "Hello.zip", allocator);
+    document.AddMember("fileTotalLen", 50000, allocator);
+    document.AddMember("fileCurrentLen", 30000, allocator);
+    document.AddMember("md5", "adfafagagsd", allocator);
+    document.AddMember("isSuccess", 0, allocator);
+    rapidjson::Value ObjectArray(rapidjson::kArrayType);
+
+    for(int i = 1; i < threadNum; i++)
+    {
+        rapidjson::Value obj(rapidjson::kObjectType);
+        obj.AddMember("index",i, allocator);//注：常量是没有问题的
+        obj.AddMember("startPos", 0, allocator);
+        obj.AddMember("endPosPos", 0, allocator);
+        obj.AddMember("isSuccess", 0, allocator);
+        ObjectArray.PushBack(obj, allocator);
+    }
+    document.AddMember("threadNodes", ObjectArray, allocator);
+
+    StringBuffer buffer;
+    rapidjson::Writer<StringBuffer> writer(buffer);
+    document.Accept(writer);
+    std::string bufferStr = buffer.GetString();
+    cout << "fuck buffer str is " << bufferStr << endl;
+}
 
 static size_t writeFunc(void *ptr, size_t size, size_t nmemb, void *userdata)
 {
@@ -48,6 +98,7 @@ long getDownloadFileLenth(const char *url)
 {
     double downloadFileLenth = 0;
     char curl_errbuf[CURL_ERROR_SIZE];
+    
     CURL *handle = curl_easy_init();
     curl_easy_setopt(handle, CURLOPT_URL, url);
     // 输出详细信息
@@ -81,6 +132,8 @@ int progressFunction(void *ptr, double totalToDownload, double nowDownloaded, do
         pthread_mutex_lock (&g_mutex);
         long size = 0L;
         downloadNode *pNode = (downloadNode*)ptr;
+        cout << "Current thread is : " << pNode->index << " , and download precent is "<< nowDownloaded * 100 / totalToDownload << "%"<< endl;
+        
         downloadMap[pNode->index] = nowDownloaded;
         map <int, long>::iterator i = downloadMap.begin();
         while (i != downloadMap.end())
@@ -90,7 +143,9 @@ int progressFunction(void *ptr, double totalToDownload, double nowDownloaded, do
         }
         size = size - long(totalThreadNum) + 1L;  // 计算真实数据长度
         float precent = ((size * 100 )/ totalDownloadSize) ;
-        cout << "download precent is " << precent <<  "% 。"<< endl;
+        
+        cout << "total download precent is " << precent <<  "% 。"<< endl;
+        
         pthread_mutex_unlock (&g_mutex);
     }
     return 0;
@@ -153,6 +208,9 @@ bool libcurldownload(int threadNum, string url, string path, string fileName)
     totalDownloadSize = fileLength;
     cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>totalDownloadsize: " << totalDownloadSize << endl;
     // 先清除掉本次下载信息
+    
+    
+    initTmpJson(threadNum);
     downloadMap.clear();
     errorFlag = false;
     const string outFileName = path + fileName;
@@ -180,6 +238,8 @@ bool libcurldownload(int threadNum, string url, string path, string fileName)
 #else
         snprintf(range, sizeof (range), "%ld-%ld", pNode->startPos, pNode->endPos);
 #endif
+        cout << "fuck  range is : " << range << endl;
+        
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeFunc);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)pNode);
