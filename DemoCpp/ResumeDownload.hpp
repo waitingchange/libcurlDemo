@@ -8,14 +8,30 @@
 #ifndef ResumeDownload_hpp
 #define ResumeDownload_hpp
 
+#include <iostream>
+#include <string>
+#include <map>
+#include <thread>
+#include <mutex>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include <unistd.h>
 #include <sys/stat.h>
-#include <iostream>
-#include <string.h>
+
 #include <curl/curl.h>
 
-void resumeDownload(std::string downloadUrl);
+using namespace std;
+
+struct downloadNode
+{
+    FILE *fp;
+    long startPos;
+    long endPos;
+    CURL *curl;
+    int index;
+};
+
+
+void resumeDownload(std::string downloadUrl,std::string md5Str);
 
 #endif /* ResumeDownload_hpp */

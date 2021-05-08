@@ -9,17 +9,17 @@
 
 int currThreadCnt;
 int totalThreadNum;
-long totalDownloadSize;
+uint64_t totalDownloadSize;
 bool errorFlag;
-map <int, long> downloadMap;
+map <int, uint64_t> downloadMap;
 static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 struct downloadNode
 {
     FILE *fp;
-    long startPos;
-    long endPos;
+    uint64_t startPos;
+    uint64_t endPos;
     CURL *curl;
     int index;
 };
@@ -50,16 +50,16 @@ int progressFunction(void *ptr, double totalToDownload, double nowDownloaded, do
     if (totalToDownload > 0 && nowDownloaded >0)
     {
         pthread_mutex_lock (&g_mutex);
-        long size = 0L;
+        uint64_t size = 0L;
         downloadNode *pNode = (downloadNode*)ptr;
         downloadMap[pNode->index] = nowDownloaded;
-        map <int, long>::iterator i = downloadMap.begin();
+        map <int, uint64_t>::iterator i = downloadMap.begin();
         while (i != downloadMap.end())
         {
             size += i->second;
             ++i;
         }
-        size = size - long(totalThreadNum) + 1L;
+        size = size - uint64_t(totalThreadNum) + 1L;
         float precent = ((size * 100 )/ totalDownloadSize) ;
         cout << "download precent is " << precent <<  "% 。"<< endl;
 //        cout <<"currentDownloadSize: "<<size << " tototalSize:"<<totalDownloadSize<<endl;
@@ -68,7 +68,7 @@ int progressFunction(void *ptr, double totalToDownload, double nowDownloaded, do
     return 0;
 }
 
-long getDownloadFileLenth(const char *url)
+uint64_t getDownloadFileLenth(const char *url)
 {
     double downloadFileLenth = 0;
     char curl_errbuf[CURL_ERROR_SIZE];
@@ -157,11 +157,11 @@ static void dump(const char *text,
     width = 0x40;
 
   fprintf(stream, "%s, %10.10lu bytes (0x%8.8lx)\n",
-          text, (unsigned long)size, (unsigned long)size);
+          text, (unsigned uint64_t)size, (unsigned uint64_t)size);
 
   for(i = 0; i<size; i += width) {
 
-    fprintf(stream, "%4.4lx: ", (unsigned long)i);
+    fprintf(stream, "%4.4lx: ", (unsigned uint64_t)i);
 
     if(!nohex) {
       /* hex not disabled, show it */
@@ -235,7 +235,7 @@ static int my_trace(CURL *handle, curl_infotype type,
 bool download(int threadNum, string url, string path, string fileName)
 {
     totalThreadNum = threadNum;
-    long fileLength = getDownloadFileLenth(url.c_str());
+    uint64_t fileLength = getDownloadFileLenth(url.c_str());
     if (fileLength <= 0)
     {
         cout<<"get the file length error...";

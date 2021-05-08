@@ -8,14 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		0C1CAB1325BA7696003B1491 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0C1CAB1225BA7696003B1491 /* main.cpp */; };
-		0C243F97262EBD5900622712 /* LibcurlDownloader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0C243F95262EBD5900622712 /* LibcurlDownloader.cpp */; };
 		0C2FC10E262950E3009F10A8 /* libnghttp2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C605FBD262744EF00CBB8EE /* libnghttp2.a */; };
-		0C4A337B262D8D800014B93E /* ResumeDownload.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0C4A3379262D8D800014B93E /* ResumeDownload.cpp */; };
 		0C4DF3C32631545900A5013E /* MD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0C4DF3C12631545900A5013E /* MD5.cpp */; };
 		0C605FAE26273F0B00CBB8EE /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C605FAD26273F0B00CBB8EE /* Security.framework */; };
 		0C605FBE262744EF00CBB8EE /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C605FBA262744EF00CBB8EE /* libssl.a */; };
 		0C605FBF262744EF00CBB8EE /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C605FBB262744EF00CBB8EE /* libcrypto.a */; };
 		0C605FC0262744EF00CBB8EE /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C605FBC262744EF00CBB8EE /* libcurl.a */; };
+		0C7D77232644DCE8004B406B /* LibcurlDownloader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0C243F95262EBD5900622712 /* LibcurlDownloader.cpp */; };
+		0C7D77242644DCE8004B406B /* DownloadManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0C141936263273AD00C23857 /* DownloadManager.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -31,6 +31,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0C141936263273AD00C23857 /* DownloadManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DownloadManager.cpp; sourceTree = "<group>"; };
+		0C141937263273AD00C23857 /* DownloadManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = DownloadManager.hpp; sourceTree = "<group>"; };
 		0C1CAB0F25BA7696003B1491 /* DemoCpp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = DemoCpp; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C1CAB1225BA7696003B1491 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		0C243F95262EBD5900622712 /* LibcurlDownloader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LibcurlDownloader.cpp; sourceTree = "<group>"; };
@@ -149,6 +151,8 @@
 				0C4A337A262D8D800014B93E /* ResumeDownload.hpp */,
 				0C243F95262EBD5900622712 /* LibcurlDownloader.cpp */,
 				0C243F96262EBD5900622712 /* LibcurlDownloader.hpp */,
+				0C141936263273AD00C23857 /* DownloadManager.cpp */,
+				0C141937263273AD00C23857 /* DownloadManager.hpp */,
 				0C4DF3C12631545900A5013E /* MD5.cpp */,
 				0C4DF3C22631545900A5013E /* MD5.hpp */,
 			);
@@ -323,10 +327,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0C7D77232644DCE8004B406B /* LibcurlDownloader.cpp in Sources */,
+				0C7D77242644DCE8004B406B /* DownloadManager.cpp in Sources */,
 				0C1CAB1325BA7696003B1491 /* main.cpp in Sources */,
-				0C4A337B262D8D800014B93E /* ResumeDownload.cpp in Sources */,
 				0C4DF3C32631545900A5013E /* MD5.cpp in Sources */,
-				0C243F97262EBD5900622712 /* LibcurlDownloader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

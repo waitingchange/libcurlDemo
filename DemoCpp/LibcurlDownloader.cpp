@@ -7,84 +7,17 @@
 
 #include "LibcurlDownloader.hpp"
 
-#include "json/rapidjson.h"
-#include "json/document.h"
-#include "json/writer.h"
-#include "json/stringbuffer.h"
-
-using namespace rapidjson;
-
 
 int currThreadCnt;
 int totalThreadNum;
-long totalDownloadSize;
+uint64_t totalDownloadSize;
 bool errorFlag;
-map <int, long> downloadMap;
+map <int, uint64_t> downloadMap;
 static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-struct downloadNode
-{
-    FILE *fp;
-    long startPos;
-    long endPos;
-    CURL *curl;
-    int index;
-};
 
+FILE * tmpf;
 
-struct downloadInfo
-{
-    string fileName;
-    long totalFileLen;
-    long currentFileLen;
-    int threadNum;
-    string fileMd5;
-    uint32_t success;
-};
-
-// read 方式去查看本地文件是否存在
-bool checkLocalFileIsExist(std::string filePath)
-{
-    FILE *fh;
-    fh = fopen(filePath.c_str(), "r");
-    if(fh == nullptr)
-    {
-        return false;
-    }
-    fclose(fh);
-    return true;
-}
-
-void initTmpJson(int threadNum)
-{
-    rapidjson::Document document;
-    document.SetObject();
-    rapidjson::Document::AllocatorType &allocator = document.GetAllocator();
-//    object.AddMember("clientTime", UtilityTools::getCurrentMilliseconds(), allocator);
-    document.AddMember("fileName", "Hello.zip", allocator);
-    document.AddMember("fileTotalLen", 50000, allocator);
-    document.AddMember("fileCurrentLen", 30000, allocator);
-    document.AddMember("md5", "adfafagagsd", allocator);
-    document.AddMember("isSuccess", 0, allocator);
-    rapidjson::Value ObjectArray(rapidjson::kArrayType);
-
-    for(int i = 1; i < threadNum; i++)
-    {
-        rapidjson::Value obj(rapidjson::kObjectType);
-        obj.AddMember("index",i, allocator);//注：常量是没有问题的
-        obj.AddMember("startPos", 0, allocator);
-        obj.AddMember("endPosPos", 0, allocator);
-        obj.AddMember("isSuccess", 0, allocator);
-        ObjectArray.PushBack(obj, allocator);
-    }
-    document.AddMember("threadNodes", ObjectArray, allocator);
-
-    StringBuffer buffer;
-    rapidjson::Writer<StringBuffer> writer(buffer);
-    document.Accept(writer);
-    std::string bufferStr = buffer.GetString();
-    cout << "fuck buffer str is " << bufferStr << endl;
-}
 
 static size_t writeFunc(void *ptr, size_t size, size_t nmemb, void *userdata)
 {
@@ -107,34 +40,6 @@ static size_t writeFunc(void *ptr, size_t size, size_t nmemb, void *userdata)
     return written;
 }
 
-long getDownloadFileLenth(const char *url)
-{
-    double downloadFileLenth = 0;
-    char curl_errbuf[CURL_ERROR_SIZE];
-    
-    CURL *handle = curl_easy_init();
-    curl_easy_setopt(handle, CURLOPT_URL, url);
-    // 输出详细信息
-    //curl_easy_setopt(handle, CURLOPT_VERBOSE, 1L);
-    curl_easy_setopt(handle, CURLOPT_HEADER, 1);
-    curl_easy_setopt(handle, CURLOPT_NOBODY, 1);
-    curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, curl_errbuf);
-    CURLcode code = curl_easy_perform(handle);
-    if ( code == CURLE_OK)
-    {
-        char *ct;
-        /* ask for the content-type */
-        curl_easy_getinfo(handle, CURLINFO_CONTENT_TYPE, &ct);
-        curl_easy_getinfo(handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &downloadFileLenth);
-        cout << "We received Content-Type: " << ct  << endl;
-    }
-    else
-    {
-        cout << "curl getdownload error and code is: " << code << " and message is: " << curl_easy_strerror(code) << " error buffer : "<<curl_errbuf << endl;
-        downloadFileLenth = -1;
-    }
-    return downloadFileLenth;
-}
 
 
 
@@ -143,21 +48,29 @@ int progressFunction(void *ptr, double totalToDownload, double nowDownloaded, do
     if (totalToDownload > 0 && nowDownloaded >0)
     {
         pthread_mutex_lock (&g_mutex);
-        long size = 0L;
+        uint64_t size = 0L;
         downloadNode *pNode = (downloadNode*)ptr;
         cout << "Current thread is : " << pNode->index << " , and download precent is "<< nowDownloaded * 100 / totalToDownload << "%"<< endl;
         
         downloadMap[pNode->index] = nowDownloaded;
-        map <int, long>::iterator i = downloadMap.begin();
+        map <int, uint64_t>::iterator i = downloadMap.begin();
         while (i != downloadMap.end())
         {
             size += i->second;
             ++i;
         }
-        size = size - long(totalThreadNum) + 1L;  // 计算真实数据长度
-        float precent = ((size * 100 )/ totalDownloadSize) ;
-        
+        size = size - uint64_t(totalThreadNum) + 1L;  // 计算真实数据长度
+        float precent = ((size * 100 ) / totalDownloadSize);
+        downloadFileInfo * info = DownloadManager::getInstance()->m_fileInfo;
+        info->currentFileLen = size;
         cout << "total download precent is " << precent <<  "% 。"<< endl;
+    
+      
+        std::string jsonInfo = DownloadManager::getInstance()->updateTempFileJsonInfo();
+        fseek(tmpf, 0, SEEK_SET);
+        fwrite(jsonInfo.c_str(), sizeof(char), jsonInfo.length(), tmpf);
+        fflush(tmpf);
+        
         
         pthread_mutex_unlock (&g_mutex);
     }
@@ -171,6 +84,7 @@ void downloadFinish(FILE *fp)
     pthread_mutex_unlock (&g_mutex);
     if (currThreadCnt == 0)
     {
+        fclose(tmpf);
         fclose(fp);
         cout << "download succed......" << endl;
         curl_global_cleanup();
@@ -201,83 +115,80 @@ void *workThread(void *pData)
         downloadError("Downlaod error, Error code : " + curlcode);
     }
     curl_easy_cleanup(pNode->curl);
-
-    delete pNode;
+//    DownloadManager::getInstance()->deleteNodeById(pNode->index);
     return NULL;
 }
 
 
 
 
-bool libcurldownload(int threadNum, string url, string path, string fileName)
+bool libcurldownload()
 {
-    totalThreadNum = threadNum;
-    long fileLength = getDownloadFileLenth(url.c_str());
-    if (fileLength <= 0)
+    downloadFileInfo * info = DownloadManager::getInstance()->m_fileInfo;
+    unordered_map <int, downloadNode *> & downloadNodes = DownloadManager::getInstance()->downloadThreadInfo;
+    
+    totalThreadNum = info->threadNum;
+    totalDownloadSize = info->totalFileLen;
+    const string outFileName = info->outPutName;
+    const string tmpFileName = info->outTmpFile;
+    errorFlag = false;
+    FILE *fp;
+    tmpf = fopen(tmpFileName.c_str(), "wb");
+    
+    if(!tmpf)
     {
-        cout<<"get the file length error...";
+        cout << "open local info file error !" << endl;
         return false;
     }
-    totalDownloadSize = fileLength;
-    
-    const string outFileName = path + fileName;
-    const string outTmpFile = outFileName + ".tmp";
-    // 先清除掉本次下载信息
-    downloadMap.clear();
-    errorFlag = false;
-    
-    bool hasTmpFile = checkLocalFileIsExist(outTmpFile);
-    if(hasTmpFile)
-    {
-        cout << "fuck neet resume download!" << endl;
+    if (info->isExist) {
+        fp = fopen(outFileName.c_str(), "ab");
     }else{
-        cout << "first time to download file !" << endl;
-        
-        initTmpJson(threadNum);
-        FILE *fp = fopen(outFileName.c_str(), "wb");
-        if (!fp)
-        {
-            return false;
-        }
-        
-        //根据线程来进行分片
-        for (int i = 0; i < threadNum; i++)
-        {
-            downloadNode *pNode = new downloadNode();
-            pNode->startPos = fileLength * i / threadNum;
-            pNode->endPos = fileLength * (i + 1) / threadNum;
-            CURL *curl = curl_easy_init();
-
-            pNode->curl = curl;
-            pNode->fp = fp;
-            pNode->index = i + 1;
-            char range[64] = { 0 };
-            
-    #ifdef _WIN32
-            _snprintf(range, sizeof (range), "%ld-%ld", pNode->startPos, pNode->endPos);
-    #else
-            snprintf(range, sizeof (range), "%ld-%ld", pNode->startPos, pNode->endPos);
-    #endif
-            cout << "fuck  range is : " << range << endl;
-            
-            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeFunc);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)pNode);
-            curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-            curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressFunction);
-            curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void *)pNode);;
-            curl_easy_setopt(curl, CURLOPT_RANGE, range);
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0L);
-            curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
-    //        // 设置重定位URL
-            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    //
-            pthread_mutex_lock (&g_mutex);
-            currThreadCnt++;
-            pthread_mutex_unlock (&g_mutex);
-            std::thread thread(workThread, pNode);
-            thread.detach();
-        }
+        // 先清除掉本次下载信息
+        downloadMap.clear();
+        fp = fopen(outFileName.c_str(), "wb");
     }
+    if (!fp)
+    {
+        return false;
+    }
+    
+    unordered_map<int, downloadNode *>::iterator iter;
+    iter = downloadNodes.begin();
+    while(iter != downloadNodes.end()) {
+        downloadNode *pNode = iter->second;
+        CURL *curl = curl_easy_init();
+        pNode->curl = curl;
+        pNode->fp = fp;
+        pNode->index = iter->first + 1;
+        char range[64] = { 0 };
+        
+#ifdef _WIN32
+        _snprintf(range, sizeof (range), "%ld-%ld", pNode->startPos, pNode->endPos);
+#else
+        snprintf(range, sizeof (range), "%ld-%ld", pNode->startPos, pNode->endPos);
+#endif
+        
+        cout << "fuck range " << range << endl;
+        
+        curl_easy_setopt(curl, CURLOPT_URL, info->url.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeFunc);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)pNode);
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressFunction);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void *)pNode);;
+        curl_easy_setopt(curl, CURLOPT_RANGE, range);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0L);
+        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
+//        // 设置重定位URL
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+//
+        pthread_mutex_lock (&g_mutex);
+        currThreadCnt++;
+        pthread_mutex_unlock (&g_mutex);
+        std::thread thread(workThread, pNode);
+        thread.detach();
+        iter++;
+    }
+ 
     return true;
 }

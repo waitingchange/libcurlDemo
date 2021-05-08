@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 #include <curl/curl.h>
-
+#include "DownloadManager.hpp"
 
 
 using namespace std;
@@ -30,7 +30,7 @@ using namespace std;
     #pragma comment(lib,"Advapi32.lib")
 #endif
 
-bool libcurldownload(int threadNum, string url, string path, string fileName);
+bool libcurldownload();
 
 
 
